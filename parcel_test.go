@@ -129,7 +129,6 @@ func TestGetByClient(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 	store := NewParcelStore(db)
-	parcel := getTestParcel()
 
 	parcels := []Parcel{
 		getTestParcel(),
@@ -144,11 +143,14 @@ func TestGetByClient(t *testing.T) {
 	parcels[1].Client = client
 	parcels[2].Client = client
 
+	parcels[1].Number = 1
+	parcels[2].Number = 2
+
 	// add
 	for i := 0; i < len(parcels); i++ {
 		id, err := store.Add(parcels[i])
 		assert.NoError(t, err)
-		assert.Equal(t, id, parcel.Number)
+		assert.Equal(t, id, parcels[i].Number)
 
 		// обновляем идентификатор добавленной у посылки
 		parcels[i].Number = id
