@@ -21,7 +21,8 @@ func (s ParcelStore) Add(p Parcel) (int, error) {
 		sql.Named("client", p.Client),
 		sql.Named("status", p.Status),
 		sql.Named("address", p.Address),
-		sql.Named("number", p.Number))
+		sql.Named("number", p.Number),
+		sql.Named("created_at", p.CreatedAt))
 	if err != nil {
 		return 0, err
 	}
@@ -38,7 +39,7 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 	// заполните объект Parcel данными из таблицы
 	p := Parcel{}
 
-	err := row.Scan(&p)
+	err := row.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt)
 
 	if err != nil {
 		return p, err
@@ -50,12 +51,23 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	// реализуйте чтение строк из таблицы parcel по заданному client
 	// здесь из таблицы может вернуться несколько строк
-	rows := s.db.QueryRow("SELECT * FROM parcel WHERE client = :client", sql.Named("client", client))
+	rows, err := s.db.Query("SELECT * FROM parcel WHERE client = :client", sql.Named("client", client))
+
+	if err != nil {
+		return nil, err
+	}
 
 	// заполните срез Parcel данными из таблицы
 	var res []Parcel
 
-	err := rows.Scan(&res)
+	for rows.Next() {
+		p := Parcel{}
+		err := rows.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt)
+		if err != nil {
+			return res, err
+		}
+		res = append(res, p)
+	}
 
 	return res, err
 }
