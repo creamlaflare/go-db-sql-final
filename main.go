@@ -45,6 +45,7 @@ func (s ParcelService) Register(client int, address string) (Parcel, error) {
 
 	parcel.Number = id
 
+	// New parcel registered
 	fmt.Printf("Новая посылка № %d на адрес %s от клиента с идентификатором %d зарегистрирована %s\n",
 		parcel.Number, parcel.Address, parcel.Client, parcel.CreatedAt)
 
@@ -57,8 +58,10 @@ func (s ParcelService) PrintClientParcels(client int) error {
 		return err
 	}
 
+	// Print all parcels of the client
 	fmt.Printf("Посылки клиента %d:\n", client)
 	for _, parcel := range parcels {
+		// Print details of each parcel
 		fmt.Printf("Посылка № %d на адрес %s от клиента с идентификатором %d зарегистрирована %s, статус %s\n",
 			parcel.Number, parcel.Address, parcel.Client, parcel.CreatedAt, parcel.Status)
 	}
@@ -80,9 +83,11 @@ func (s ParcelService) NextStatus(number int) error {
 	case ParcelStatusSent:
 		nextStatus = ParcelStatusDelivered
 	case ParcelStatusDelivered:
+		// No further status update required
 		return nil
 	}
 
+	// Update to the new status
 	fmt.Printf("У посылки № %d новый статус: %s\n", number, nextStatus)
 
 	return s.store.SetStatus(number, nextStatus)
@@ -97,14 +102,17 @@ func (s ParcelService) Delete(number int) error {
 }
 
 func main() {
-	// настройте подключение к БД
-	db, err := sql.Open("sqlite", "demo.db")
+	db, err := sql.Open("sqlite", "tracker.db")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	defer db.Close()
 
-	store := NewParcelStore(db) // создайте объект ParcelStore функцией NewParcelStore
+	store := NewParcelStore(db)
 	service := NewParcelService(store)
 
-	// регистрация посылки
+	// Register a parcel
 	client := 1
 	address := "Псков, д. Пушкина, ул. Колотушкина, д. 5"
 	p, err := service.Register(client, address)
@@ -113,7 +121,7 @@ func main() {
 		return
 	}
 
-	// изменение адреса
+	// Change address
 	newAddress := "Саратов, д. Верхние Зори, ул. Козлова, д. 25"
 	err = service.ChangeAddress(p.Number, newAddress)
 	if err != nil {
@@ -121,51 +129,50 @@ func main() {
 		return
 	}
 
-	// изменение статуса
+	// Change status
 	err = service.NextStatus(p.Number)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// вывод посылок клиента
+	// Print parcels of the client
 	err = service.PrintClientParcels(client)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// попытка удаления отправленной посылки
+	// Attempt to delete a sent parcel
 	err = service.Delete(p.Number)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// вывод посылок клиента
-	// предыдущая посылка не должна удалиться, т.к. её статус НЕ «зарегистрирована»
+	// Print parcels of the client
+	// The previous parcel should not be deleted as its status is NOT 'registered'
 	err = service.PrintClientParcels(client)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// регистрация новой посылки
+	// Register a new parcel
 	p, err = service.Register(client, address)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// удаление новой посылки
+	// Delete the new parcel
 	err = service.Delete(p.Number)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
 
-	// вывод посылок клиента
-	// здесь не должно быть последней посылки, т.к. она должна была успешно удалиться
+	// Print parcels of the client
+	// The last parcel should be gone as it should have been successfully deleted
 	err = service.PrintClientParcels(client)
 	if err != nil {
 		fmt.Println(err)
