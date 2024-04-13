@@ -18,18 +18,17 @@ func (s ParcelStore) Add(p Parcel) (int, error) {
 		sql.Named("client", p.Client),
 		sql.Named("status", p.Status),
 		sql.Named("address", p.Address),
-		sql.Named("number", p.Number),
 		sql.Named("created_at", p.CreatedAt))
 	if err != nil {
 		return 0, err
 	}
 	lastId, err := res.LastInsertId()
+	p.Number = int(lastId)
 	return int(lastId), err
 }
 
 func (s ParcelStore) Get(number int) (Parcel, error) {
 	row := s.db.QueryRow("SELECT * FROM parcel WHERE number = :number", sql.Named("number", number))
-
 	p := Parcel{}
 
 	err := row.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt)
@@ -43,7 +42,7 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 
 func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	rows, err := s.db.Query("SELECT * FROM parcel WHERE client = :client", sql.Named("client", client))
-
+	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}

@@ -36,15 +36,14 @@ func TestAddGetDelete(t *testing.T) {
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
 
-	id, err := store.Add(parcel)
+	parcel.Number, err = store.Add(parcel)
 	assert.NoError(t, err)
-	assert.Equal(t, id, parcel.Number)
 
-	storedParcel, err := store.Get(id)
+	storedParcel, err := store.Get(parcel.Number)
 	assert.NoError(t, err)
 	assert.Equal(t, parcel, storedParcel)
 
-	err = store.Delete(id)
+	err = store.Delete(parcel.Number)
 	assert.NoError(t, err)
 }
 
@@ -59,7 +58,6 @@ func TestSetAddress(t *testing.T) {
 
 	id, err := store.Add(parcel)
 	assert.NoError(t, err)
-	assert.Equal(t, id, parcel.Number)
 
 	newAddress := "new test address"
 	err = store.SetAddress(id, newAddress)
@@ -82,21 +80,20 @@ func TestSetStatus(t *testing.T) {
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
 
-	id, err := store.Add(parcel)
-	assert.NoError(t, err)
-	assert.Equal(t, id, parcel.Number)
-
-	err = store.SetStatus(id, ParcelStatusDelivered)
+	parcel.Number, err = store.Add(parcel)
 	assert.NoError(t, err)
 
-	storedParcel, err := store.Get(id)
+	err = store.SetStatus(parcel.Number, ParcelStatusDelivered)
+	assert.NoError(t, err)
+
+	storedParcel, err := store.Get(parcel.Number)
 	assert.NoError(t, err)
 	assert.Equal(t, ParcelStatusDelivered, storedParcel.Status)
 
-	err = store.SetStatus(id, ParcelStatusRegistered)
+	err = store.SetStatus(parcel.Number, ParcelStatusRegistered)
 	assert.NoError(t, err)
 
-	err = store.Delete(id)
+	err = store.Delete(parcel.Number)
 	assert.NoError(t, err)
 }
 
@@ -125,15 +122,14 @@ func TestGetByClient(t *testing.T) {
 
 	// add
 	for i := 0; i < len(parcels); i++ {
-		id, err := store.Add(parcels[i])
+		parcels[i].Number, err = store.Add(parcels[i])
 		assert.NoError(t, err)
-		assert.Equal(t, id, parcels[i].Number)
 
 		// Update the identifier of the added parcel.
-		parcels[i].Number = id
+		parcels[i].Number = parcels[i].Number
 
 		// Save the added parcel in a map structure, so it can be easily retrieved by parcel identifier.
-		parcelMap[id] = parcels[i]
+		parcelMap[parcels[i].Number] = parcels[i]
 	}
 
 	storedParcels, err := store.GetByClient(client)
