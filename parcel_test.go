@@ -125,9 +125,6 @@ func TestGetByClient(t *testing.T) {
 		parcels[i].Number, err = store.Add(parcels[i])
 		assert.NoError(t, err)
 
-		// Update the identifier of the added parcel.
-		parcels[i].Number = parcels[i].Number
-
 		// Save the added parcel in a map structure, so it can be easily retrieved by parcel identifier.
 		parcelMap[parcels[i].Number] = parcels[i]
 	}
