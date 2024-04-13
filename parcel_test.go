@@ -2,23 +2,22 @@ package main
 
 import (
 	"database/sql"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
 var (
-	// randSource источник псевдо случайных чисел.
-	// Для повышения уникальности в качестве seed
-	// используется текущее время в unix формате (в виде числа)
+	// randSource is the source of pseudorandom numbers.
+	// To increase uniqueness, the current time in Unix format (as a number) is used as the seed.
 	randSource = rand.NewSource(time.Now().UnixNano())
-	// randRange использует randSource для генерации случайных чисел
+	// randRange uses randSource to generate random numbers.
 	randRange = rand.New(randSource)
 )
 
-// getTestParcel возвращает тестовую посылку
+// getTestParcel returns a test parcel.
 func getTestParcel() Parcel {
 	return Parcel{
 		Client:    1000,
@@ -28,60 +27,83 @@ func getTestParcel() Parcel {
 	}
 }
 
-// TestAddGetDelete проверяет добавление, получение и удаление посылки
+// TestAddGetDelete tests adding, retrieving, and deleting a parcel.
 func TestAddGetDelete(t *testing.T) {
 	// prepare
-	db, err := // настройте подключение к БД
+	db, err := sql.Open("sqlite", "tracker.db")
+	require.NoError(t, err)
+	defer db.Close()
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
 
-	// add
-	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
+	parcel.Number, err = store.Add(parcel)
+	assert.NoError(t, err)
 
-	// get
-	// получите только что добавленную посылку, убедитесь в отсутствии ошибки
-	// проверьте, что значения всех полей в полученном объекте совпадают со значениями полей в переменной parcel
+	storedParcel, err := store.Get(parcel.Number)
+	assert.NoError(t, err)
+	assert.Equal(t, parcel, storedParcel)
 
-	// delete
-	// удалите добавленную посылку, убедитесь в отсутствии ошибки
-	// проверьте, что посылку больше нельзя получить из БД
+	err = store.Delete(parcel.Number)
+	assert.NoError(t, err)
 }
 
-// TestSetAddress проверяет обновление адреса
+// TestSetAddress tests updating the address.
 func TestSetAddress(t *testing.T) {
 	// prepare
-	db, err := // настройте подключение к БД
+	db, err := sql.Open("sqlite", "tracker.db")
+	require.NoError(t, err)
+	defer db.Close()
+	store := NewParcelStore(db)
+	parcel := getTestParcel()
 
-	// add
-	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
+	id, err := store.Add(parcel)
+	assert.NoError(t, err)
 
-	// set address
-	// обновите адрес, убедитесь в отсутствии ошибки
 	newAddress := "new test address"
+	err = store.SetAddress(id, newAddress)
+	assert.NoError(t, err)
 
-	// check
-	// получите добавленную посылку и убедитесь, что адрес обновился
+	storedParcel, err := store.Get(id)
+	assert.NoError(t, err)
+	assert.Equal(t, newAddress, storedParcel.Address)
+
+	err = store.Delete(id)
+	assert.NoError(t, err)
 }
 
-// TestSetStatus проверяет обновление статуса
+// TestSetStatus tests updating the status.
 func TestSetStatus(t *testing.T) {
 	// prepare
-	db, err := // настройте подключение к БД
+	db, err := sql.Open("sqlite", "tracker.db")
+	require.NoError(t, err)
+	defer db.Close()
+	store := NewParcelStore(db)
+	parcel := getTestParcel()
 
-	// add
-	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
+	parcel.Number, err = store.Add(parcel)
+	assert.NoError(t, err)
 
-	// set status
-	// обновите статус, убедитесь в отсутствии ошибки
+	err = store.SetStatus(parcel.Number, ParcelStatusDelivered)
+	assert.NoError(t, err)
 
-	// check
-	// получите добавленную посылку и убедитесь, что статус обновился
+	storedParcel, err := store.Get(parcel.Number)
+	assert.NoError(t, err)
+	assert.Equal(t, ParcelStatusDelivered, storedParcel.Status)
+
+	err = store.SetStatus(parcel.Number, ParcelStatusRegistered)
+	assert.NoError(t, err)
+
+	err = store.Delete(parcel.Number)
+	assert.NoError(t, err)
 }
 
-// TestGetByClient проверяет получение посылок по идентификатору клиента
+// TestGetByClient tests retrieving parcels by client identifier.
 func TestGetByClient(t *testing.T) {
 	// prepare
-	db, err := // настройте подключение к БД
+	db, err := sql.Open("sqlite", "tracker.db")
+	require.NoError(t, err)
+	defer db.Close()
+	store := NewParcelStore(db)
 
 	parcels := []Parcel{
 		getTestParcel(),
@@ -90,32 +112,33 @@ func TestGetByClient(t *testing.T) {
 	}
 	parcelMap := map[int]Parcel{}
 
-	// задаём всем посылкам один и тот же идентификатор клиента
 	client := randRange.Intn(10_000_000)
 	parcels[0].Client = client
 	parcels[1].Client = client
 	parcels[2].Client = client
 
+	parcels[1].Number = 1
+	parcels[2].Number = 2
+
 	// add
 	for i := 0; i < len(parcels); i++ {
-		id, err := // добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
+		parcels[i].Number, err = store.Add(parcels[i])
+		assert.NoError(t, err)
 
-		// обновляем идентификатор добавленной у посылки
-		parcels[i].Number = id
-
-		// сохраняем добавленную посылку в структуру map, чтобы её можно было легко достать по идентификатору посылки
-		parcelMap[id] = parcels[i]
+		// Save the added parcel in a map structure, so it can be easily retrieved by parcel identifier.
+		parcelMap[parcels[i].Number] = parcels[i]
 	}
 
-	// get by client
-	storedParcels, err := // получите список посылок по идентификатору клиента, сохранённого в переменной client
-	// убедитесь в отсутствии ошибки
-	// убедитесь, что количество полученных посылок совпадает с количеством добавленных
-
-	// check
+	storedParcels, err := store.GetByClient(client)
+	assert.NoError(t, err)
+	assert.Len(t, storedParcels, len(parcels))
 	for _, parcel := range storedParcels {
-		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
-		// убедитесь, что все посылки из storedParcels есть в parcelMap
-		// убедитесь, что значения полей полученных посылок заполнены верно
+		// In parcelMap lie the added parcels, the key - parcel identifier, the value - the parcel itself.
+		require.Contains(t, parcelMap, parcel.Number)
+	}
+
+	for _, parcel := range storedParcels {
+		err = store.Delete(parcel.Number)
+		assert.NoError(t, err)
 	}
 }
